@@ -328,8 +328,8 @@ gst_rtp_h264_set_src_caps (GstRtpH264Depay * rtph264depay)
 
     /* 6 bits reserved | 2 bits lengthSizeMinusOn */
     *data++ = 0xff;
-    /* 3 bits reserved | 5 bits numOfSequenceParameterSets */
-    *data++ = 0xe0 | (rtph264depay->sps->len & 0x1f);
+    /* We guarantee that rtph264depay->sps->len <= 32 */
+    *data++ = (guint8) rtph264depay->sps->len;
 
     /* copy all SPS */
     for (i = 0; i < rtph264depay->sps->len; i++) {
@@ -514,6 +514,10 @@ gst_rtp_h264_add_sps_pps (GstElement * rtph264, GPtrArray * sps_array,
     if (!parse_sps (&map, &sps_id)) {
       GST_WARNING_OBJECT (rtph264, "Invalid SPS,"
           " can't parse seq_parameter_set_id");
+      goto drop;
+    }
+    if (G_UNLIKELY (sps_id > 31)) {
+      GST_WARNING_OBJECT (rtph264, "Invalid SPS id ", sps_id);
       goto drop;
     }
 
